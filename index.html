@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KRONOS MH-01 — The Weight of Time</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Montserrat:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #0A0A0A;
+    --gold: #C9A84C;
+    --gold-dim: #8B6E32;
+    --surface: #141414;
+    --mid: #2A2A2A;
+    --text: #F5F5F0;
+    --muted: #888880;
+    --serif: 'Cormorant Garamond', serif;
+    --sans: 'Montserrat', sans-serif;
+  }
+
+  html { scroll-behavior: auto; }
+
+  ::selection{ background: none; }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  #cursor {
+    position: fixed;
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width .2s, height .2s, background .2s;
+  }
+  #cursor-ring {
+    position: fixed;
+    width: 32px; height: 32px;
+    border: 1px solid rgba(201,168,76,0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: width .3s, height .3s, transform .08s ease-out;
+  }
+
+  /* ─── SCROLL CONTAINER ─── */
+  #scroll-container {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  #scroll-track {
+    will-change: transform;
+  }
+
+  /* ─── PROGRESS ─── */
+  #progress-line {
+    position: fixed;
+    top: 0; left: 0;
+    height: 1px;
+    background: linear-gradient(90deg, var(--gold), transparent);
+    z-index: 100;
+    width: 0%;
+    transition: width .05s linear;
+  }
+
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 32px 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 50;
+    mix-blend-mode: normal;
+  }
+
+  .nav-logo {
+    font-family: var(--serif);
+    font-size: 18px;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+    font-weight: 300;
+  }
+
+  .nav-monogram {
+    font-family: var(--serif);
+    font-size: 13px;
+    letter-spacing: 0.4em;
+    color: var(--muted);
+    font-weight: 200;
+    text-transform: uppercase;
+  }
+
+  /* ─── SCROLL PROXY (gives scroll length) ─── */
+  #scroll-proxy {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1px;
+  }
+
+  /* ─── SCENES ─── */
+  .scene {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+
+  /* ─── SCENE 0: HERO ─── */
+  #scene-0 {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .hero-eyebrow {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    color: var(--gold);
+    font-weight: 300;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+
+  .hero-title {
+    font-family: var(--serif);
+    font-size: clamp(72px, 12vw, 180px);
+    font-weight: 300;
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    text-align: center;
+    color: var(--text);
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .hero-sub {
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.6em;
+    color: var(--muted);
+    font-weight: 200;
+    margin-top: 32px;
+    text-transform: uppercase;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .scroll-hint span {
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.5em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 48px;
+    background: linear-gradient(to bottom, var(--gold), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(1); }
+    50% { opacity: 1; transform: scaleY(0.6); }
+  }
+
+  /* ─── CANVAS SCENE (scene 1–3) ─── */
+  #scene-watch {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 1;
+  }
+
+  #watch-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ─── SCENE 2: SPECS ─── */
+  #scene-2 {
+    align-items: flex-start;
+    padding: 0 10vw;
+  }
+
+  .specs-block {
+    max-width: 520px;
+  }
+
+  .specs-label {
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.6em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+
+  .specs-headline {
+    font-family: var(--serif);
+    font-size: clamp(36px, 5vw, 72px);
+    font-weight: 300;
+    line-height: 1.1;
+    margin-bottom: 48px;
+  }
+
+  .specs-headline em { font-style: italic; color: var(--gold); }
+
+  .spec-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--mid);
+  }
+
+  .spec-key {
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.4em;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 300;
+  }
+
+  .spec-val {
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  /* ─── SCENE 3: PHILOSOPHY ─── */
+  #scene-3 {
+    flex-direction: column;
+    text-align: center;
+    padding: 0 12vw;
+  }
+
+  .philosophy-quote {
+    font-family: var(--serif);
+    font-size: clamp(28px, 4vw, 60px);
+    font-weight: 300;
+    font-style: italic;
+    line-height: 1.3;
+    color: var(--text);
+    margin-bottom: 40px;
+    max-width: 900px;
+  }
+
+  .philosophy-attr {
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.6em;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-weight: 300;
+  }
+
+  /* ─── SCENE 4: DETAILS GRID ─── */
+  #scene-4 {
+    align-items: flex-end;
+    padding: 0 10vw 80px;
+    flex-direction: column;
+    text-align: right;
+  }
+
+  .detail-num {
+    font-family: var(--serif);
+    font-size: clamp(80px, 15vw, 220px);
+    font-weight: 300;
+    color: var(--mid);
+    line-height: 1;
+    margin-bottom: -20px;
+  }
+
+  .detail-label {
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.5em;
+    color: var(--gold);
+    text-transform: uppercase;
+    font-weight: 300;
+    margin-bottom: 8px;
+  }
+
+  .detail-desc {
+    font-family: var(--serif);
+    font-size: clamp(20px, 2.5vw, 36px);
+    font-weight: 300;
+    color: var(--text);
+    max-width: 400px;
+    line-height: 1.4;
+  }
+
+  /* ─── SCENE 5: CLOSER ─── */
+  #scene-5 {
+    flex-direction: column;
+    text-align: center;
+    gap: 0;
+  }
+
+  .closer-small {
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.6em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    font-weight: 300;
+  }
+
+  .closer-title {
+    font-family: var(--serif);
+    font-size: clamp(48px, 8vw, 130px);
+    font-weight: 300;
+    line-height: 0.95;
+    text-align: center;
+    letter-spacing: -0.01em;
+  }
+
+  .closer-title em {
+    display: block;
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .cta-row {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    margin-top: 56px;
+    justify-content: center;
+  }
+
+  .cta-btn {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.5em;
+    text-transform: uppercase;
+    font-weight: 400;
+    padding: 16px 40px;
+    border: 1px solid var(--gold);
+    color: var(--gold);
+    background: transparent;
+    cursor: none;
+    position: relative;
+    overflow: hidden;
+    transition: color .3s;
+  }
+
+  .cta-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gold);
+    transform: translateX(-101%);
+    transition: transform .4s cubic-bezier(0.7,0,0.3,1);
+  }
+
+  .cta-btn:hover::before { transform: translateX(0); }
+  .cta-btn:hover { color: var(--black); }
+
+  .cta-btn span { position: relative; z-index: 1; }
+
+  .footer-sig {
+    position: absolute;
+    bottom: 32px;
+    right: 48px;
+    font-family: var(--serif);
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--mid);
+    font-style: italic;
+  }
+
+  /* ─── GRAIN OVERLAY ─── */
+  #grain {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    pointer-events: none;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    background-size: 200px;
+  }
+
+  /* ─── VIGNETTE ─── */
+  #vignette {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<div id="progress-line"></div>
+<div id="grain"></div>
+<div id="vignette"></div>
+
+<nav>
+  <div class="nav-logo">KRONOS</div>
+  <div class="nav-monogram">MH — 01</div>
+</nav>
+
+<!-- Fixed watch canvas -->
+<div id="scene-watch">
+  <canvas id="watch-canvas"></canvas>
+</div>
+
+<!-- Scroll driver -->
+<div id="scroll-proxy"></div>
+
+<!-- Scenes (absolutely positioned, layered) -->
+<div id="scene-container">
+
+  <section class="scene" id="scene-0">
+    <div class="hero-eyebrow">A. MH — Geneva, 2024</div>
+    <div>
+      <div class="hero-title">KRONOS<br><em>MH‑01</em></div>
+      <div class="hero-sub">The Weight of Time</div>
+    </div>
+    <div class="scroll-hint">
+      <span>Scroll</span>
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <section class="scene" id="scene-2">
+    <div class="specs-block">
+      <div class="specs-label">Movement</div>
+      <h2 class="specs-headline">Calibre <em>MH‑3600</em><br>In-house</h2>
+      <div class="spec-row"><span class="spec-key">Power Reserve</span><span class="spec-val">72 hours</span></div>
+      <div class="spec-row"><span class="spec-key">Frequency</span><span class="spec-val">28,800 vph</span></div>
+      <div class="spec-row"><span class="spec-key">Jewels</span><span class="spec-val">31</span></div>
+      <div class="spec-row"><span class="spec-key">Case</span><span class="spec-val">904L Steel — 40mm</span></div>
+      <div class="spec-row"><span class="spec-key">Water Resistance</span><span class="spec-val">300m</span></div>
+      <div class="spec-row"><span class="spec-key">Crystal</span><span class="spec-val">Sapphire, AR-coated</span></div>
+    </div>
+  </section>
+
+  <section class="scene" id="scene-3">
+    <blockquote class="philosophy-quote">
+      "We do not make watches.<br>We shape time into something<br>you can hold."
+    </blockquote>
+    <div class="philosophy-attr">MH — Atelier Statement, Geneva</div>
+  </section>
+
+  <section class="scene" id="scene-4">
+    <div class="detail-num">72</div>
+    <div class="detail-label">Hour Power Reserve</div>
+    <div class="detail-desc">Three days of uninterrupted precision, built from a single mainspring barrel.</div>
+  </section>
+
+  <section class="scene" id="scene-5">
+    <div class="closer-small">Own the MH-01</div>
+    <h2 class="closer-title">Time,<br><em>Redefined.</em></h2>
+    <div class="cta-row">
+      <button class="cta-btn"><span>Request Pricing</span></button>
+    </div>
+    <div class="footer-sig">Designed by MH — 2024</div>
+  </section>
+
+</div>
+
+<script>
+// ─── CURSOR ───────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.left = mx + 'px';
+  cursor.style.top = my + 'px';
+});
+
+function animRing() {
+  rx += (mx - rx) * 0.12;
+  ry += (my - ry) * 0.12;
+  ring.style.left = rx + 'px';
+  ring.style.top = ry + 'px';
+  requestAnimationFrame(animRing);
+}
+animRing();
+
+document.querySelectorAll('button, a').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cursor.style.width = '0px';
+    ring.style.width = '56px';
+    ring.style.height = '56px';
+  });
+  el.addEventListener('mouseleave', () => {
+    cursor.style.width = '8px';
+    ring.style.width = '32px';
+    ring.style.height = '32px';
+  });
+});
+
+// ─── SCROLL SETUP ─────────────────────────────────────
+const TOTAL_SCENES = 6;
+const SCENE_SCROLL = window.innerHeight * 1.5; // scroll per scene
+const TOTAL_SCROLL = SCENE_SCROLL * (TOTAL_SCENES + 1);
+
+document.getElementById('scroll-proxy').style.height = TOTAL_SCROLL + 'px';
+
+let currentScroll = 0;
+let targetScroll = 0;
+const EASE = 0.06;
+
+document.addEventListener('wheel', e => {
+  targetScroll = Math.max(0, Math.min(TOTAL_SCROLL - window.innerHeight, targetScroll + e.deltaY * 1.2));
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') targetScroll = Math.min(TOTAL_SCROLL - innerHeight, targetScroll + 120);
+  if (e.key === 'ArrowUp') targetScroll = Math.max(0, targetScroll - 120);
+});
+
+let touchStart = 0;
+document.addEventListener('touchstart', e => { touchStart = e.touches[0].clientY; }, { passive: true });
+document.addEventListener('touchmove', e => {
+  const dy = touchStart - e.touches[0].clientY;
+  targetScroll = Math.max(0, Math.min(TOTAL_SCROLL - innerHeight, targetScroll + dy * 2));
+  touchStart = e.touches[0].clientY;
+  e.preventDefault();
+}, { passive: false });
+
+// ─── CANVAS WATCH ─────────────────────────────────────
+const canvas = document.getElementById('watch-canvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function drawWatch(progress, opacity, scale, x, y) {
+  // progress 0→1 animates watch from dark to revealed
+  const cx = x, cy = y;
+  const R = Math.min(canvas.width, canvas.height) * 0.28 * scale;
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+
+  // ── Outer ring / Bezel ──
+  const bezelGrad = ctx.createRadialGradient(cx - R*0.3, cy - R*0.3, R*0.1, cx, cy, R*1.08);
+  bezelGrad.addColorStop(0, '#3a3020');
+  bezelGrad.addColorStop(0.4, '#C9A84C');
+  bezelGrad.addColorStop(0.7, '#8B6E32');
+  bezelGrad.addColorStop(1, '#1a1508');
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 1.08, 0, Math.PI * 2);
+  ctx.fillStyle = bezelGrad;
+  ctx.fill();
+
+  // Bezel tachymeter marks
+  for (let i = 0; i < 60; i++) {
+    const a = (i / 60) * Math.PI * 2 - Math.PI / 2;
+    const r1 = R * 1.01;
+    const r2 = i % 5 === 0 ? R * 0.94 : R * 0.97;
+    ctx.save();
+    ctx.strokeStyle = i % 5 === 0 ? '#C9A84C' : '#5a4a20';
+    ctx.lineWidth = i % 5 === 0 ? 1.5 : 0.8;
+    ctx.globalAlpha = opacity * (0.3 + progress * 0.7);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    ctx.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Dial ──
+  const dialGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.9);
+  dialGrad.addColorStop(0, '#0d0d0d');
+  dialGrad.addColorStop(0.6, '#080808');
+  dialGrad.addColorStop(1, '#111');
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.9, 0, Math.PI * 2);
+  ctx.fillStyle = dialGrad;
+  ctx.fill();
+
+  // Subtle sunburst texture
+  ctx.save();
+  ctx.globalAlpha = opacity * 0.06;
+  for (let i = 0; i < 120; i++) {
+    const a = (i / 120) * Math.PI * 2;
+    ctx.strokeStyle = '#C9A84C';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * R * 0.9, cy + Math.sin(a) * R * 0.9);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── Hour indices ──
+  for (let h = 1; h <= 12; h++) {
+    const a = (h / 12) * Math.PI * 2 - Math.PI / 2;
+    const ixGrad = opacity * Math.min(1, progress * 2);
+    ctx.save();
+    ctx.globalAlpha = ixGrad;
+    if (h % 3 === 0) {
+      // Large marker
+      const iR = R * 0.78;
+      ctx.fillStyle = '#C9A84C';
+      ctx.translate(cx + Math.cos(a) * iR, cy + Math.sin(a) * iR);
+      ctx.rotate(a + Math.PI / 2);
+      ctx.fillRect(-3, -12, 6, 24);
+    } else {
+      const iR = R * 0.78;
+      ctx.strokeStyle = '#C9A84C';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * (iR - 8), cy + Math.sin(a) * (iR - 8));
+      ctx.lineTo(cx + Math.cos(a) * (iR + 8), cy + Math.sin(a) * (iR + 8));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Date window at 3 o'clock ──
+  if (progress > 0.4) {
+    ctx.save();
+    ctx.globalAlpha = opacity * Math.min(1, (progress - 0.4) * 3);
+    const dw = { x: cx + R * 0.58, y: cy };
+    ctx.fillStyle = '#1a1a1a';
+    ctx.strokeStyle = '#C9A84C';
+    ctx.lineWidth = 1;
+    ctx.fillRect(dw.x - 14, dw.y - 11, 28, 22);
+    ctx.strokeRect(dw.x - 14, dw.y - 11, 28, 22);
+    ctx.fillStyle = '#F5F5F0';
+    ctx.font = `300 ${R * 0.13}px Montserrat`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('24', dw.x, dw.y);
+    ctx.restore();
+  }
+
+  // ── Hands ──
+  const now = new Date();
+  const sec = now.getSeconds() + now.getMilliseconds() / 1000;
+  const min = now.getMinutes() + sec / 60;
+  const hr  = (now.getHours() % 12) + min / 60;
+
+  function drawHand(angle, length, width, color, shadow) {
+    ctx.save();
+    ctx.globalAlpha = opacity * Math.min(1, progress * 1.5);
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    if (shadow) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, R * 0.12);
+    ctx.lineTo(0, -length);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Hour hand
+  drawHand((hr / 12) * Math.PI * 2 - Math.PI / 2 + (progress * Math.PI * 4), R * 0.52, R * 0.032, '#F5F5F0', true);
+  // Minute hand
+  drawHand((min / 60) * Math.PI * 2 - Math.PI / 2 + (progress * Math.PI * 8), R * 0.72, R * 0.022, '#F5F5F0', false);
+  // Seconds hand
+  drawHand((sec / 60) * Math.PI * 2 - Math.PI / 2, R * 0.78, R * 0.008, '#C9A84C', true);
+
+  // Center cap
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  const capGrad = ctx.createRadialGradient(cx - 2, cy - 2, 1, cx, cy, R * 0.06);
+  capGrad.addColorStop(0, '#C9A84C');
+  capGrad.addColorStop(1, '#5a4020');
+  ctx.beginPath();
+  ctx.arc(cx, cy, R * 0.04, 0, Math.PI * 2);
+  ctx.fillStyle = capGrad;
+  ctx.fill();
+  ctx.restore();
+
+  // ── Crown (right side) ──
+  ctx.save();
+  ctx.globalAlpha = opacity * progress;
+  ctx.fillStyle = '#2a2010';
+  ctx.strokeStyle = '#8B6E32';
+  ctx.lineWidth = 1.5;
+  const crownX = cx + R * 1.13;
+  ctx.beginPath();
+  ctx.roundRect(crownX, cy - R * 0.06, R * 0.1, R * 0.12, 3);
+  ctx.fill();
+  ctx.stroke();
+  for (let i = 0; i < 4; i++) {
+    ctx.strokeStyle = '#5a4020';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(crownX + 2, cy - R * 0.04 + i * (R * 0.035));
+    ctx.lineTo(crownX + R * 0.08, cy - R * 0.04 + i * (R * 0.035));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // ── Lugs ──
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  const lugPositions = [
+    { x: cx - R * 0.3, y: cy - R * 1.02, w: R * 0.25, h: R * 0.15 },
+    { x: cx + R * 0.06, y: cy - R * 1.02, w: R * 0.25, h: R * 0.15 },
+    { x: cx - R * 0.3, y: cy + R * 0.88, w: R * 0.25, h: R * 0.15 },
+    { x: cx + R * 0.06, y: cy + R * 0.88, w: R * 0.25, h: R * 0.15 },
+  ];
+  lugPositions.forEach(l => {
+    const lg = ctx.createLinearGradient(l.x, l.y, l.x + l.w, l.y + l.h);
+    lg.addColorStop(0, '#2a2010');
+    lg.addColorStop(0.5, '#C9A84C');
+    lg.addColorStop(1, '#1a1508');
+    ctx.fillStyle = lg;
+    ctx.beginPath();
+    ctx.roundRect(l.x, l.y, l.w, l.h, 4);
+    ctx.fill();
+  });
+  ctx.restore();
+
+  // ── Strap ──
+  ctx.save();
+  ctx.globalAlpha = opacity * 0.85;
+  // Top strap
+  const strapGrad = ctx.createLinearGradient(cx - R * 0.22, 0, cx + R * 0.22, 0);
+  strapGrad.addColorStop(0, '#1a0a00');
+  strapGrad.addColorStop(0.5, '#2a1200');
+  strapGrad.addColorStop(1, '#0d0600');
+  ctx.fillStyle = strapGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - R * 0.22, cy - R * 1.07);
+  ctx.lineTo(cx + R * 0.22, cy - R * 1.07);
+  ctx.lineTo(cx + R * 0.18, cy - R * 2.2);
+  ctx.lineTo(cx - R * 0.18, cy - R * 2.2);
+  ctx.fill();
+  // Stitch lines
+  ctx.strokeStyle = '#8B6E32';
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(cx - R * 0.16, cy - R * 1.1);
+  ctx.lineTo(cx - R * 0.13, cy - R * 2.1);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + R * 0.16, cy - R * 1.1);
+  ctx.lineTo(cx + R * 0.13, cy - R * 2.1);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Bottom strap
+  ctx.fillStyle = strapGrad;
+  ctx.beginPath();
+  ctx.moveTo(cx - R * 0.22, cy + R * 0.96);
+  ctx.lineTo(cx + R * 0.22, cy + R * 0.96);
+  ctx.lineTo(cx + R * 0.18, cy + R * 1.8);
+  ctx.lineTo(cx - R * 0.18, cy + R * 1.8);
+  ctx.fill();
+  ctx.restore();
+
+  // Brand text on dial
+  ctx.save();
+  ctx.globalAlpha = opacity * Math.min(1, (progress - 0.2) * 2);
+  ctx.fillStyle = '#C9A84C';
+  ctx.font = `300 ${R * 0.09}px Montserrat`;
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = '0.3em';
+  ctx.fillText('KRONOS', cx, cy - R * 0.3);
+  ctx.fillStyle = '#888880';
+  ctx.font = `200 ${R * 0.065}px Montserrat`;
+  ctx.fillText('GENEVA', cx, cy - R * 0.18);
+  ctx.fillStyle = '#444';
+  ctx.font = `200 ${R * 0.055}px Montserrat`;
+  ctx.fillText('AUTOMATIC', cx, cy + R * 0.32);
+  ctx.restore();
+
+  ctx.restore(); // global save
+}
+
+// ─── SCENE MANAGER ────────────────────────────────────
+const scenes = [
+  document.getElementById('scene-0'),
+  null, // watch only
+  document.getElementById('scene-2'),
+  document.getElementById('scene-3'),
+  document.getElementById('scene-4'),
+  document.getElementById('scene-5'),
+];
+
+const sceneWatch = document.getElementById('scene-watch');
+
+function getProgress(scroll, start, end) {
+  return Math.max(0, Math.min(1, (scroll - start) / (end - start)));
+}
+
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+function render() {
+  currentScroll += (targetScroll - currentScroll) * EASE;
+  const s = currentScroll;
+  const H = window.innerHeight;
+  const S = SCENE_SCROLL;
+
+  // Progress bar
+  document.getElementById('progress-line').style.width = (s / (TOTAL_SCROLL - H) * 100) + '%';
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // SCENE 0: Hero — fade out as you scroll
+  {
+    const sc = scenes[0];
+    const fadeOut = getProgress(s, S * 0.3, S * 0.8);
+    sc.style.opacity = easeOut(1 - fadeOut);
+    sc.style.pointerEvents = fadeOut < 0.9 ? 'auto' : 'none';
+    const yShift = s * 0.4;
+    sc.style.transform = `translateY(${-yShift}px)`;
+  }
+
+  // WATCH SCENE — appears from scene 0.5 → stays until scene 4
+  {
+    const appearP = getProgress(s, S * 0.3, S * 0.9);
+    const disappearP = getProgress(s, S * 4.2, S * 4.8);
+    const watchOpacity = easeOut(appearP) * (1 - easeOut(disappearP));
+    sceneWatch.style.opacity = watchOpacity;
+
+    if (watchOpacity > 0.01) {
+      // Watch reveal progress: 0 at scene 0.8, 1 at scene 2.0
+      const revealP = easeInOut(getProgress(s, S * 0.8, S * 2.0));
+      // Watch position: center at scene 1, shifts right at scene 2, left at scene 3
+      let wx = canvas.width / 2;
+      let wy = canvas.height / 2;
+      let wscale = 1;
+
+      if (s > S * 1.5) {
+        // Scene 2: watch moves right
+        const move2 = easeInOut(getProgress(s, S * 1.5, S * 2.2));
+        wx = canvas.width * (0.5 + move2 * 0.28);
+        wscale = 1 - move2 * 0.1;
+      }
+      if (s > S * 2.8) {
+        // Scene 3: watch centers back
+        const move3 = easeInOut(getProgress(s, S * 2.8, S * 3.3));
+        wx = canvas.width * (0.78 - move3 * 0.28);
+        wscale = 0.9 + move3 * 0.1;
+      }
+      if (s > S * 3.7) {
+        // Scene 4: watch moves left, grows
+        const move4 = easeInOut(getProgress(s, S * 3.7, S * 4.2));
+        wx = canvas.width * (0.5 - move4 * 0.26);
+        wscale = 1 + move4 * 0.15;
+      }
+
+      drawWatch(revealP, watchOpacity, wscale, wx, wy);
+    }
+  }
+
+  // SCENE 2: Specs — slides in
+  {
+    const sc = scenes[2];
+    const p = getProgress(s, S * 1.5, S * 2.1);
+    const pOut = getProgress(s, S * 2.6, S * 3.0);
+    const op = easeOut(p) * (1 - easeOut(pOut));
+    const tx = (1 - easeOut(p)) * -80;
+    sc.style.opacity = op;
+    sc.style.transform = `translateX(${tx}px)`;
+    sc.style.pointerEvents = op > 0.5 ? 'auto' : 'none';
+  }
+
+  // SCENE 3: Philosophy
+  {
+    const sc = scenes[3];
+    const p = getProgress(s, S * 2.6, S * 3.1);
+    const pOut = getProgress(s, S * 3.5, S * 3.9);
+    const op = easeOut(p) * (1 - easeOut(pOut));
+    const scale = 0.93 + easeOut(p) * 0.07;
+    sc.style.opacity = op;
+    sc.style.transform = `scale(${scale})`;
+    sc.style.pointerEvents = op > 0.5 ? 'auto' : 'none';
+  }
+
+  // SCENE 4: 72h detail
+  {
+    const sc = scenes[4];
+    const p = getProgress(s, S * 3.7, S * 4.2);
+    const pOut = getProgress(s, S * 4.4, S * 4.8);
+    const op = easeOut(p) * (1 - easeOut(pOut));
+    const tx = (1 - easeOut(p)) * 80;
+    sc.style.opacity = op;
+    sc.style.transform = `translateX(${tx}px)`;
+    sc.style.pointerEvents = op > 0.5 ? 'auto' : 'none';
+  }
+
+  // SCENE 5: Closer
+  {
+    const sc = scenes[5];
+    const p = getProgress(s, S * 4.6, S * 5.2);
+    const op = easeOut(p);
+    const ty = (1 - easeOut(p)) * 60;
+    sc.style.opacity = op;
+    sc.style.transform = `translateY(${ty}px)`;
+    sc.style.pointerEvents = op > 0.5 ? 'auto' : 'none';
+  }
+
+  requestAnimationFrame(render);
+}
+
+render();
+</script>
+</body>
+</html>
